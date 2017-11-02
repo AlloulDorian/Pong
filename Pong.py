@@ -1,5 +1,6 @@
 #!/usr/bin/env python2.7
 import sys
+from random import randint
 import pygame
 from pygame.locals import *
 
@@ -19,7 +20,9 @@ class Pong:
         self.background = pygame.Surface(self.screen.get_size())
         self.background = self.background.convert()
         self.background.fill((0,0,0))
-        self.coef = 10
+        self.coef_y = randint(-10,10)
+        self.coef_x = [-1,1][randint(0,1)]
+        self.ball_tracked = True
 
     def draw(self):
 
@@ -33,20 +36,26 @@ class Pong:
         self.screen.blit(self.background, (0,0))
         
     def movments_calcul(self):
-        if self.ball.x > self.width:
-            print('WINNER: J1')
-            sys.exit(0)
+        if self.ball.x > (self.width-(self.ball.d)):
+            if self.ball_tracked == True:
+                self.coef_x = self.coef_x*-1
+            else:
+                print('WINNER: J1')
+                sys.exit(0)
         elif self.ball.x < 1:
-            print('WINNER: J2')
-            sys.exit(0)
+            if self.ball_tracked == True:
+                self.coef_x = self.coef_x*-1
+            else:
+                print('WINNER: J2')
+                sys.exit(0)
             
         elif self.ball.y > (self.height-2-self.ball.d/2):
-            self.coef = self.coef * (-1)
+            self.coef_y = self.coef_y * (-1)
         elif self.ball.y<3:
-            self.coef = self.coef * (-1)
+            self.coef_y = self.coef_y * (-1)
             
-        self.ball.x = self.ball.x+1
-        self.ball.y = self.ball.y+self.coef
+        self.ball.x = self.ball.x+self.coef_x
+        self.ball.y = self.ball.y+self.coef_y
 
     def is_on_wall(self,pos):
         x,y = pos
