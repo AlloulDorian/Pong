@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 import sys
-from random import randint
+from random import randint, choice
 import pygame
 from pygame.locals import *
 
@@ -20,11 +20,19 @@ class Pong:
         self.background = pygame.Surface(self.screen.get_size())
         self.background = self.background.convert()
         self.background.fill((0,0,0))
-        self.coef_y = randint(-10,10)
+
+        #Define Ball's orientation
+        allowed_values = list(range(-5, 5+1))
+        allowed_values.remove(-1)
+        allowed_values.remove(0)
+        allowed_values.remove(1)
+        # can be anything in {-5, ..., 5} \ {-1,0,1}:
+        self.coef_y = choice(allowed_values) 
         self.coef_x = -1#[-1,1][randint(0,1)]
+
         self.ball_tracked = True
-        self.p1 = Player(1,'toto',self.height/6,self.height/2)
-        self.p2 = Player(2,'titi',self.height/6,self.height/2)
+        self.p1 = Player(1,'toto',(self.height/6,10),self.height/2)
+        self.p2 = Player(2,'titi',(self.height/6,10),self.height/2)
 
     def draw(self):
 
@@ -46,14 +54,14 @@ class Pong:
 
         
     def movments_calcul(self):
-        if self.ball.x > (self.width-10-(self.ball.d)):
-            if self.ball.y>self.p1.wall_y and self.ball.y<self.p1.wall_y+self.p1.wall_long:
+        if self.ball.x > (self.width-self.p2.wall_width-(self.ball.d)) and self.coef_x==1:
+            if self.ball.y>self.p2.wall_y and self.ball.y<self.p2.wall_y+self.p2.wall_height:
                 self.coef_x = self.coef_x*-1
             else:
                 print('WINNER: J1')
                 sys.exit(0)
-        elif self.ball.x < 10:
-            if self.ball.y>self.p1.wall_y and self.ball.y<self.p1.wall_y+self.p1.wall_long:
+        elif self.ball.x < self.p1.wall_width:
+            if self.ball.y>self.p1.wall_y and self.ball.y<self.p1.wall_y+self.p1.wall_height:
                 self.coef_x = self.coef_x*-1
             else:
                 print('WINNER: J2')
@@ -96,10 +104,10 @@ class Pong:
                 if event.type == QUIT:
                     return
                 if event.type == KEYDOWN:
-                    if event.key == K_UP and self.p1.wall_y>self.p1.wall_long:
-                        self.p1.wall_y = self.p1.wall_y-self.p1.wall_long
-                    elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_long*2:
-                        self.p1.wall_y = self.p1.wall_y+self.p1.wall_long
+                    if event.key == K_UP and self.p1.wall_y>self.p1.wall_height:
+                        self.p1.wall_y = self.p1.wall_y-self.p1.wall_height
+                    elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_height*2:
+                        self.p1.wall_y = self.p1.wall_y+self.p1.wall_height
             self.p2.wall_y = self.ball.y - self.p2.wall_y/2
             self.draw()
             self.movments_calcul()
