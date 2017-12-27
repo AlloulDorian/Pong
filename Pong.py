@@ -100,6 +100,7 @@ class Pong:
                         self.p1.wall_y = self.p1.wall_y-self.p1.wall_long
                     elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_long*2:
                         self.p1.wall_y = self.p1.wall_y+self.p1.wall_long
+            self.p2.wall_y = self.ball.y - self.p2.wall_y/2
             self.draw()
             self.movments_calcul()
             self.draw_wall()
