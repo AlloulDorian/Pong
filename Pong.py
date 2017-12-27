@@ -9,7 +9,7 @@ from Player import Player
 
 pygame.font.init()
 
-icon_32x32 = pygame.image.load("ping.png")
+icon_32x32 = pygame.image.load("image/ping.png")
 pygame.display.set_icon(icon_32x32)
 
 class Pong:
