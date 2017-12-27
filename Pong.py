@@ -21,8 +21,10 @@ class Pong:
         self.background = self.background.convert()
         self.background.fill((0,0,0))
         self.coef_y = randint(-10,10)
-        self.coef_x = [-1,1][randint(0,1)]
+        self.coef_x = -1#[-1,1][randint(0,1)]
         self.ball_tracked = True
+        self.p1 = Player(1,'toto',self.height/6,self.height/2)
+        self.p2 = Player(2,'titi',self.height/6,self.height/2)
 
     def draw(self):
 
@@ -31,19 +33,27 @@ class Pong:
         ball_pos = (self.ball.x, self.ball.y)
         self.background.fill((0, 0, 0))
         self.background.blit(ball_s, ball_pos)
+        
+        # Display Player Walls
+        wall_p1 = self.p1.gen_surface()
+        self.background.blit(wall_p1, (0,self.p1.wall_y))
+
+        wall_p2 = self.p2.gen_surface()
+        self.background.blit(wall_p2, (self.width-10,self.p2.wall_y))
 
         # Blit everything to the screen
         self.screen.blit(self.background, (0,0))
+
         
     def movments_calcul(self):
-        if self.ball.x > (self.width-(self.ball.d)):
-            if self.ball_tracked == True:
+        if self.ball.x > (self.width-10-(self.ball.d)):
+            if self.ball.y>self.p1.wall_y and self.ball.y<self.p1.wall_y+self.p1.wall_long:
                 self.coef_x = self.coef_x*-1
             else:
                 print('WINNER: J1')
                 sys.exit(0)
-        elif self.ball.x < 1:
-            if self.ball_tracked == True:
+        elif self.ball.x < 10:
+            if self.ball.y>self.p1.wall_y and self.ball.y<self.p1.wall_y+self.p1.wall_long:
                 self.coef_x = self.coef_x*-1
             else:
                 print('WINNER: J2')
@@ -79,16 +89,22 @@ class Pong:
         pygame.init()
         pygame.display.set_caption('Pong')
 
+
         # Event loop
         while 1:
             for event in pygame.event.get():
                 if event.type == QUIT:
                     return
+                if event.type == KEYDOWN:
+                    if event.key == K_UP and self.p1.wall_y>self.p1.wall_long:
+                        self.p1.wall_y = self.p1.wall_y-self.p1.wall_long
+                    elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_long*2:
+                        self.p1.wall_y = self.p1.wall_y+self.p1.wall_long
             self.draw()
             self.movments_calcul()
             self.draw_wall()
             pygame.display.update()
-            pygame.time.wait(10)
+            pygame.time.wait(2*abs(self.coef_y))
 
 game = Pong((500,500))
 game.run()
