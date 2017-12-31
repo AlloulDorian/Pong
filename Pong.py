@@ -6,6 +6,7 @@ from pygame.locals import *
 
 from Ball import Ball
 from Player import Player
+from Networking import Networking
 
 pygame.font.init()
 
