@@ -16,8 +16,19 @@ pygame.display.set_icon(icon_32x32)
 class Pong:
 
     def __init__(self,window_size,nb_players=4):
+        # Arguments verifications
+        if len(sys.argv[1:])<4 :
+            print('3 arguments needed')
+            sys.exit(1)
+
+        # Import Arguments
+        self.mode = str(sys.argv[1])
+        self.ip_address = str(sys.argv[2])
+        self.port = int(sys.argv[3])
+        self.nb_players = int(sys.argv[4])
+
+
         self.width,self.height = window_size
-        self.nb_players = nb_players
         self.ball = Ball(10,(self.width/2,self.height/2)) 
         
         # Fill background
@@ -33,19 +44,24 @@ class Pong:
         allowed_values.remove(1)
         # can be anything in {-5, ..., 5} \ {-1,0,1}:
         self.coef_y = choice(allowed_values) 
-        self.coef_x = -1#[-1,1][randint(0,1)]
+        self.coef_x = [-1,1][randint(0,1)]
 
         self.ball_tracked = True
         
         # Define players
         wall_player1_2_height = int(round(self.height/6))
         wall_player3_4_width = int(round(self.width/6))
+        self.L_players = []
         self.p1 = Player(1,(wall_player1_2_height,10),(0,self.height/2))
         self.p2 = Player(2,(wall_player1_2_height,10),(self.width-10,self.height/2))
+        self.L_players.append(self.p1)
+        self.L_players.append(self.p2)
         if self.nb_players>=3:
             self.p3 = Player(3,(10,wall_player3_4_width),(self.width/2,0))
+            self.L_players.append(self.p3)
         if self.nb_players==4:
             self.p4 = Player(4,(10,wall_player3_4_width),(self.width/2,self.height-10))
+            self.L_players.append(self.p4)
 
 
     def draw(self):
@@ -133,6 +149,23 @@ class Pong:
             pygame.draw.rect(self.screen,white,(0,self.height-2,self.width,self.height))
         
     def run(self):
+        self.network = Networking(self.ip_address,self.port,self.nb_players-1)
+        if self.mode=='server':
+            self.network.run_server_side((self.coef_x,self.coef_y))
+            if self.nb_players>=2:
+                self.p2.socket = self.network.L_sockets[0]
+            if self.nb_players>=3:
+                self.p3.socket = self.network.L_sockets[1]
+            if self.nb_players==4:
+                self.p4.socket = self.network.L_sockets[2]
+
+                
+        else:
+            self.network.run_client_side()
+            self.coef_x = self.network.coef_x
+            self.coef_y = self.network.coef_y
+
+
         # Initialise screen
         pygame.init()
         pygame.display.set_caption('Pong Game')
@@ -140,21 +173,74 @@ class Pong:
 
         # Event loop
         while 1:
-            i = 1
+            if self.mode=='server':
+                msg = self.network.server_detect_if_client_sent_message()
+                if msg.split(':')[-1]!='':
+                    player,mov = (int(msg.split(':')[-2]),msg.split(':')[-1])
+                    print('player:'+str(player)+'\tmov:'+mov)
+                    if mov=='K_UP' and self.L_players[player-1].wall_y>self.L_players[player-1].wall_height:
+                        self.network.server_broadcast_message(player,'K_UP')
+                        if player==2:
+                            self.p2.wall_y = self.p2.wall_y-self.p2.wall_height
+                    elif mov=='K_DOWN' and self.L_players[player-1].wall_y<self.height-self.L_players[player-1].wall_height*2:
+                        self.network.server_broadcast_message(player,'K_DOWN')
+
+                        if player==2:
+                            self.p2.wall_y = self.p2.wall_y+self.L_players[player-1].wall_height
+                    # Reste a faire !!!!!!!!!!!!!!!!!!!!!!
+                    elif mov=='K_RIGHT':
+                        if player==3:
+                            self.p3.wall_x = self.p3.wall_x+self.p3.wall_width
+                        if player==4:
+                            self.p4.wall_x = self.p4.wall_x+self.p4.wall_width
+                    elif mov=='K_LEFT':
+                        if player==3:
+                            self.p3.wall_x = self.p3.wall_x-self.p3.wall_width
+                        if player==4:
+                            self.p4.wall_x = self.p4.wall_x-self.p4.wall_width
+            # If mode == client
+            else:
+                msg = self.network.client_detect_if_server_sent_message()
+                if msg.split(':')[-1]!='':
+                    player,mov = (int(msg.split(':')[-2]),msg.split(':')[-1])
+                    print('player:'+str(player)+'\tmov:'+mov)
+                    if mov=='K_UP' and self.L_players[self.network.num_player-2].wall_y>self.L_players[self.network.num_player-2].wall_height:
+                        self.L_players[self.network.num_player-2].wall_y = self.L_players[self.network.num_player-2].wall_y-self.L_players[self.network.num_player-2].wall_height
+                    elif mov=='K_DOWN' and self.L_players[self.network.num_player-2].wall_y<self.height-self.L_players[self.network.num_player-2].wall_height*2:
+                        self.L_players[self.network.num_player-2].wall_y = self.L_players[self.network.num_player-2].wall_y+self.L_players[self.network.num_player-2].wall_height
+
+                
             for event in pygame.event.get():
-                if event.type==QUIT or event.key==K_ESCAPE:
-                    return
-                if event.type == KEYDOWN:
-                    if event.key == K_UP and self.p1.wall_y>self.p1.wall_height:
-                        self.p1.wall_y = self.p1.wall_y-self.p1.wall_height
-                    elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_height*2:
-                        self.p1.wall_y = self.p1.wall_y+self.p1.wall_height
+                #if event.type==pygame.QUIT or event.key==K_ESCAPE:
+                #    return
+                if self.mode=='server':
+                    if event.type == KEYDOWN:
+                        if event.key == K_UP and self.p1.wall_y>self.p1.wall_height:
+                            self.p1.wall_y = self.p1.wall_y-self.p1.wall_height
+                            self.network.server_send_data_to_all_players('1'+':'+'K_UP')
+                        elif event.key == K_DOWN and self.p1.wall_y<self.height-self.p1.wall_height*2:
+                            self.p1.wall_y = self.p1.wall_y+self.p1.wall_height
+                            self.network.server_send_data_to_all_players('1'+':'+'K_DOWN')
+                # If self.mode!='server'
+                else:
+                    if event.type == KEYDOWN:
+                        if event.key == K_UP and self.L_players[self.network.num_player-1].wall_y>self.L_players[self.network.num_player-1].wall_height:
+                            self.L_players[self.network.num_player-1].wall_y = self.L_players[self.network.num_player-1].wall_y-self.L_players[self.network.num_player-1].wall_height
+                            self.network.client_send_data(str(self.network.num_player)+':'+'K_UP')
+                        elif event.key == K_DOWN and self.L_players[self.network.num_player-1].wall_y<self.height-self.L_players[self.network.num_player-1].wall_height*2:
+                            self.L_players[self.network.num_player-1].wall_y = self.L_players[self.network.num_player-1].wall_y+self.L_players[self.network.num_player-1].wall_height
+                            self.network.client_send_data(str(self.network.num_player)+':'+'K_DOWN')
+
+
+
+
+
             # Pseudo IA
-            self.p2.wall_y = self.ball.y - self.p2.wall_height/2
-            if self.nb_players>=3:
-                self.p3.wall_x = self.ball.x - self.p3.wall_width/2
-            if self.nb_players==4:
-                self.p4.wall_x = self.ball.x - self.p4.wall_width/2
+            #self.p2.wall_y = self.ball.y - self.p2.wall_height/2
+            #if self.nb_players>=3:
+            #    self.p3.wall_x = self.ball.x - self.p3.wall_width/2
+            #if self.nb_players==4:
+            #    self.p4.wall_x = self.ball.x - self.p4.wall_width/2
 
             self.draw()
             self.movments_calcul()
@@ -169,6 +255,6 @@ class Pong:
             if self.width<600:
                 pygame.time.wait(int(round(self.width/100))*abs(self.coef_y))
 
-game = Pong((1400,1000))
-#game = Pong((300,300))
+#game = Pong((1400,1000))
+game = Pong((700,700))
 game.run()

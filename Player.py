@@ -2,10 +2,11 @@ import pygame
 from pygame.locals import *
 
 class Player:
-    def __init__(self,num,wall_dim,wall_coord):
+    def __init__(self,num,wall_dim,wall_coord,socket=None):
         self.num = num
         self.wall_height, self.wall_width = wall_dim
         self.wall_x, self.wall_y = wall_coord
+        self.socket = socket
 
     def gen_surface(self):
         s = pygame.Surface((self.wall_width,self.wall_height))
