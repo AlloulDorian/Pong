@@ -9,6 +9,7 @@ class Networking:
         self.L_sockets = []
         self.host_socket = None
         self.num_player = 0
+        self.nb_players = 0
 
     def run_server_side(self,ball_coefs):
         self.coef_x, self.coef_y = ball_coefs
@@ -22,6 +23,9 @@ class Networking:
         # Waiting for all players connections
         for i in range(self.nb_connections):
             connection, address = serversocket.accept()
+            # Send nmber of players
+            connection.send(str(self.nb_connections+1))
+            connection.recv(1024)
             # Send to the player his number
             connection.send(str(i+2))
             connection.recv(1024)
@@ -32,8 +36,9 @@ class Networking:
             connection.recv(1024)
             self.L_sockets.append(connection)
         for sock in self.L_sockets:
-            sock.settimeout(0.01)
+            sock.settimeout(0.005)
         print('All players connected')
+        self.server_send_data_to_all_players('Ready to start !')
         self.server_socket = serversocket
         #buf = connection.recv(1024).decode()
         #if len(buf) > 0:
@@ -69,15 +74,25 @@ class Networking:
         return ''
 
     def run_client_side(self):
+        connected=False
         host_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        host_socket.connect((self.host_ip_address,self.port))
+        while connected==False:
+            connected=True
+            try:
+                host_socket.connect((self.host_ip_address,self.port))
+            except:
+                connected=False
+        self.nb_players = int(host_socket.recv(1024))
+        host_socket.send('OK')
         self.num_player = int(host_socket.recv(1024))
         host_socket.send('OK')
         self.coef_x = int(host_socket.recv(1024))
         host_socket.send('OK')
         self.coef_y = int(host_socket.recv(1024))
         host_socket.send('OK')
-        host_socket.settimeout(0.01)
+        # Waiting for server signal to start: synchronize everybody to start
+        host_socket.recv(1024)
+        host_socket.settimeout(0.005)
         self.host_socket = host_socket
 
     def client_send_data(self,data):
